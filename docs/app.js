@@ -60,14 +60,27 @@ async function loadModelAndLabels() {
 }
 loadModelAndLabels();
 
-// ─── Drawing Events ───────────────────────────────────────────
-function startDrawing(e) {
-    isDrawing = true;
-    hasDrawn = true;
-    draw(e);
+// ─── Coordinate Helper ────────────────────────────────────────
+function getPointerPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+    };
 }
 
-function stopDrawing() {
+// ─── Drawing Events ───────────────────────────────────────────
+function startDrawing(e) {
+    e.preventDefault();
+    isDrawing = true;
+    hasDrawn = true;
+    canvas.setPointerCapture(e.pointerId);
+    const pos = getPointerPos(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+function stopDrawing(e) {
     if (!isDrawing) return;
     isDrawing = false;
     ctx.beginPath();
@@ -82,37 +95,18 @@ function stopDrawing() {
 function draw(e) {
     if (!isDrawing) return;
     e.preventDefault();
-
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    let x, y;
-
-    if (e.type.includes('touch')) {
-        x = (e.touches[0].clientX - rect.left) * scaleX;
-        y = (e.touches[0].clientY - rect.top) * scaleY;
-    } else {
-        x = (e.clientX - rect.left) * scaleX;
-        y = (e.clientY - rect.top) * scaleY;
-    }
-
-    ctx.lineTo(x, y);
+    const pos = getPointerPos(e);
+    ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.moveTo(pos.x, pos.y);
 }
 
-// Mouse events
-canvas.addEventListener('mousedown', startDrawing);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', stopDrawing);
-canvas.addEventListener('mouseout', stopDrawing);
-
-// Touch events
-canvas.addEventListener('touchstart', startDrawing, { passive: false });
-canvas.addEventListener('touchmove', draw, { passive: false });
-canvas.addEventListener('touchend', stopDrawing);
-canvas.addEventListener('touchcancel', stopDrawing);
+// Pointer events (unified mouse + touch)
+canvas.addEventListener('pointerdown', startDrawing);
+canvas.addEventListener('pointermove', draw);
+canvas.addEventListener('pointerup', stopDrawing);
+canvas.addEventListener('pointerout', stopDrawing);
 
 // ─── Clear Canvas ─────────────────────────────────────────────
 clearBtn.addEventListener('click', () => {
