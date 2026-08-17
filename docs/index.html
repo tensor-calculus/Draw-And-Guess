@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw & Guess — AI Sketch Recognition</title>
+    <meta name="description" content="Draw anything and watch an AI guess what it is in real-time. Powered by a custom ResNet-SE neural network running entirely in your browser.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.min.js"></script>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-text">Loading model...</p>
+    </div>
+
+    <header>
+        <h1>Draw & Guess</h1>
+        <p class="subtitle">Draw anything and the AI will guess it in real-time.</p>
+        <p id="status-text">Loading model...</p>
+    </header>
+
+    <main class="container">
+        <div class="left-panel">
+            <div class="canvas-container">
+                <canvas id="drawing-canvas" width="400" height="400"></canvas>
+            </div>
+            <button id="clear-btn">Clear Canvas</button>
+        </div>
+        <div class="right-panel">
+            <h2>Top Predictions</h2>
+            <div id="predictions-panel">
+                <div class="placeholder">Draw something!</div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Powered by a custom ResNet-SE neural network running entirely in your browser via ONNX Runtime.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
