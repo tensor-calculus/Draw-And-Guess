@@ -16,6 +16,7 @@ let labels = [];
 let debounceTimer = null;
 let hasDrawn = false;
 let inputName = '';
+let isInferring = false;
 
 // ─── Initialize Canvas ────────────────────────────────────────
 function initCanvas() {
@@ -106,7 +107,7 @@ function draw(e) {
 canvas.addEventListener('pointerdown', startDrawing);
 canvas.addEventListener('pointermove', draw);
 canvas.addEventListener('pointerup', stopDrawing);
-canvas.addEventListener('pointerout', stopDrawing);
+canvas.addEventListener('pointercancel', stopDrawing);
 
 // ─── Clear Canvas ─────────────────────────────────────────────
 clearBtn.addEventListener('click', () => {
@@ -117,42 +118,47 @@ clearBtn.addEventListener('click', () => {
 
 // ─── Inference ────────────────────────────────────────────────
 async function predict() {
-    if (!session || !labels.length || !hasDrawn) return;
+    if (!session || !labels.length || !hasDrawn || isInferring) return;
 
-    // 1. Resize canvas to 64x64 on offscreen canvas
-    const offscreen = document.createElement('canvas');
-    offscreen.width = 64;
-    offscreen.height = 64;
-    const offCtx = offscreen.getContext('2d');
-    offCtx.fillStyle = 'white';
-    offCtx.fillRect(0, 0, 64, 64);
-    offCtx.drawImage(canvas, 0, 0, 64, 64);
+    isInferring = true;
+    try {
+        // 1. Resize canvas to 64x64 on offscreen canvas
+        const offscreen = document.createElement('canvas');
+        offscreen.width = 64;
+        offscreen.height = 64;
+        const offCtx = offscreen.getContext('2d');
+        offCtx.fillStyle = 'white';
+        offCtx.fillRect(0, 0, 64, 64);
+        offCtx.drawImage(canvas, 0, 0, 64, 64);
 
-    // 2. Get pixel data, convert to grayscale, invert, normalize
-    const imgData = offCtx.getImageData(0, 0, 64, 64);
-    const data = imgData.data;
-    const floatData = new Float32Array(64 * 64);
+        // 2. Get pixel data, convert to grayscale, invert, normalize
+        const imgData = offCtx.getImageData(0, 0, 64, 64);
+        const data = imgData.data;
+        const floatData = new Float32Array(64 * 64);
 
-    for (let i = 0; i < floatData.length; i++) {
-        const r = data[i * 4];
-        const g = data[i * 4 + 1];
-        const b = data[i * 4 + 2];
-        const avg = (r + g + b) / 3;
-        // Invert: white canvas (255) -> 0, black strokes (0) -> 1
-        floatData[i] = (255 - avg) / 255.0;
+        for (let i = 0; i < floatData.length; i++) {
+            const r = data[i * 4];
+            const g = data[i * 4 + 1];
+            const b = data[i * 4 + 2];
+            const avg = (r + g + b) / 3;
+            // Invert: white canvas (255) -> 0, black strokes (0) -> 1
+            floatData[i] = (255 - avg) / 255.0;
+        }
+
+        // 3. Create ONNX tensor [1, 64, 64, 1]
+        const inputTensor = new ort.Tensor('float32', floatData, [1, 64, 64, 1]);
+
+        // 4. Run inference
+        const results = await session.run({ [inputName]: inputTensor });
+        const outputName = session.outputNames[0];
+        const predictions = results[outputName].data;
+
+        // 5. Get top 3
+        const top3 = getTopK(predictions, 3);
+        renderPredictions(top3);
+    } finally {
+        isInferring = false;
     }
-
-    // 3. Create ONNX tensor [1, 64, 64, 1]
-    const inputTensor = new ort.Tensor('float32', floatData, [1, 64, 64, 1]);
-
-    // 4. Run inference
-    const results = await session.run({ [inputName]: inputTensor });
-    const outputName = session.outputNames[0];
-    const predictions = results[outputName].data;
-
-    // 5. Get top 3
-    const top3 = getTopK(predictions, 3);
-    renderPredictions(top3);
 }
 
 function getTopK(predictions, k) {
