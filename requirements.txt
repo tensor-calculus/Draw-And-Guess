@@ -1,0 +1,10 @@
+keras>=3.15.0
+numpy
+Pillow
+matplotlib
+scikit-learn
+onnx
+onnxruntime
+onnxscript
+
+# use torch --index-url https://download.pytorch.org/whl/cu130 for torch

@@ -1,0 +1,6 @@
+.venv
+checkpoints
+data
+quickdraw_data
+results
+__pycache__
